@@ -2,7 +2,6 @@
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue?style=flat&logo=python)
 ![PyTorch](https://img.shields.io/badge/PyTorch-Deep%20Learning-red?style=flat&logo=pytorch)
-![Scikit-Learn](https://img.shields.io/badge/Scikit_Learn-Preprocessing-orange?style=flat&logo=scikit-learn)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 
 ## 📖 Overview
