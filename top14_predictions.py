@@ -7,19 +7,19 @@ Original file is located at
     https://colab.research.google.com/drive/1hlNKuU1Zuslwe7Jrdj8T3i02cHp1jw6x
 """
 
-# math, numpy and plot
+
 import numpy as np
 import math
 import matplotlib
 import matplotlib.pyplot as plt
-# torch
+
 import torch
 import torch.autograd as autograd
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-# gzip
+
 import gzip
 import pickle
 import pandas as pd
@@ -30,56 +30,6 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.preprocessing import QuantileTransformer
 
 import pandas as pd
-
-# 1. Chargement du fichier (header=1 car la 1ère ligne est vide)
-data = pd.read_csv('Predictions top 14 - Feuille 1 (1).csv', header=1)
-
-# 2. Nettoyage des colonnes numériques (gestion virgules et espaces)
-cols_a_nettoyer = ['Possesion', 'Occupation', 'Transf_att', 'metre_att', 'plaquage_def']
-
-def nettoyer_chiffre(valeur):
-    if isinstance(valeur, str):
-        valeur = valeur.replace(' ', '').replace(',', '.')
-    return float(valeur)
-
-for col in cols_a_nettoyer:
-    if col in data.columns:
-        data[col] = data[col].astype(str).apply(nettoyer_chiffre)
-
-# 3. Calcul des statistiques de performance
-# Taux de victoire = (Victoires / Matchs) * 100
-data['Win Rate (%)'] = (data['win'] / data['Matchs']) * 100
-
-# Points Classement Estimés = (Victoire * 4) + (Nul * 2)
-# (Attention : ne prend pas en compte les bonus offensifs/défensifs)
-data['Pts Classement (Est)'] = (data['win'] * 4) + (data['draw'] * 2)
-
-# Points par match
-data['Pts/Match'] = data['Pts Classement (Est)'] / data['Matchs']
-
-# 4. Affichage du classement par Points par Match
-cols_resultat = ['Team', 'Matchs', 'win', 'Loss', 'draw', 'Win Rate (%)', 'Pts/Match']
-print(data[cols_resultat].sort_values(by='Pts/Match', ascending=False))
-
-#On va commencer à mettre en place des data que l'on peut utiliser Partie Attaque
-
-cols_totaux = ['P_att', 'P_def', 'essai_att', 'Penalité_att', 'Offloads',
-               'metre_att', 'franchis_att', 'plaquage_att', 'Turnover_def',
-               'plaquage_def', 'penalité_deff']
-
-data_avg = data.copy()
-for col in cols_totaux:
-    data_avg[col + '_avg'] = data_avg[col] / data_avg['Matchs']
-
-# 3. Sélection des colonnes finales
-cols_rates = ['Possesion', 'Occupation', 'Transf_att'] # Ceux qui sont déjà en %
-cols_finales = ['Team'] + [c + '_avg' for c in cols_totaux] + cols_rates
-
-df_stats = data_avg[cols_finales]
-
-# 4. Sauvegarde
-df_stats.to_csv('Top14_Stats_Moyennes.csv', index=False)
-print("Fichier 'Top14_Stats_Moyennes.csv' créé !")
 
 """##Prédiction de la 13 ème Journée de Top 14"""
 
@@ -98,9 +48,9 @@ print("Step 1: Chargement des statistiques...")
 
 # Chargement du fichier CSV
 try:
-    df_raw = pd.read_csv('Predictions top 14 - Feuille 1 (1).csv', header=1)
+    df_raw = pd.read_csv('data top 14 raw.csv', header=1)
 except FileNotFoundError:
-    print("ERREUR : Le fichier 'Predictions top 14 - Feuille 1 (1).csv' est introuvable.")
+    print("ERREUR : Le fichier 'data top 14 raw.csv' est introuvable.")
     raise
 
 # Fonction de nettoyage (Virgules et Espaces)
@@ -261,10 +211,8 @@ def prepare_data(matches_list, stats_df, is_training=True):
     return df, df[feature_cols].values, target, feature_cols
 
 print("Step 2: Préparation des données...")
-# Préparation TRAIN
-df_train, X_train_raw, y_train, features = prepare_data(history_matches, df_stats, is_training=True)
 
-# Préparation PREDICT
+df_train, X_train_raw, y_train, features = prepare_data(history_matches, df_stats, is_training=True)
 df_upcoming, X_upcoming_raw, _, _ = prepare_data(upcoming_matches, df_stats, is_training=False)
 
 # Mise à l'échelle (Scaler)
@@ -272,7 +220,6 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train_raw)
 X_upcoming_scaled = scaler.transform(X_upcoming_raw)
 
-# Tensors PyTorch
 X_train_tensor = torch.FloatTensor(X_train_scaled)
 y_train_tensor = torch.FloatTensor(y_train).view(-1, 1)
 X_upcoming_tensor = torch.FloatTensor(X_upcoming_scaled)
@@ -307,7 +254,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.005)
 # 5. ENTRAÎNEMENT
 # ==========================================
 print("Step 3: Entraînement du modèle...")
-epochs = 30
+epochs = 120
 for epoch in range(epochs):
     outputs = model(X_train_tensor)
     loss = criterion(outputs, y_train_tensor)
@@ -367,7 +314,7 @@ team_map = {
 # ==========================================
 print("Step 1: Chargement et Calcul des Moyennes...")
 try:
-    df_raw = pd.read_csv('Predictions top 14moy - Feuille 1.csv', header=1)
+    df_raw = pd.read_csv('data top 14 with modifications.csv', header=1)
 except FileNotFoundError:
     print("ERREUR: Fichier introuvable.")
     raise
@@ -395,8 +342,8 @@ for col in cols_to_clean:
     if col in df_raw.columns:
         df_raw[col] = df_raw[col].apply(nettoyer)
 
-# 2. CALCUL DES MOYENNES (C'est ce qui manquait !)
-# On divise les totaux par le nombre de matchs joués pour avoir une stat comparable
+
+
 cols_totaux = ['essai_att', 'Penalité_att', 'Offloads', 'metre_att',
                'franchis_att', 'plaquage_att', 'Turnover_def',
                'plaquage_def', 'penalité_deff']
@@ -412,7 +359,7 @@ print("Stats avancées calculées (Offloads/match, Mètres/match, etc.)")
 # ==========================================
 # 3. HISTORIQUE & CALENDRIER
 # ==========================================
-# Historique des résultats (Data d'entraînement)
+
 history_matches = [
     {'Home': 'UBB', 'Visitor': 'RCT', 'Score_Home': 46, 'Score_Away': 7},
     {'Home': 'MHR', 'Visitor': 'UBB', 'Score_Home': 28, 'Score_Away': 24},
@@ -494,7 +441,7 @@ history_matches = [
     {'Home': 'ASM', 'Visitor': 'STO', 'Score_Home': 24, 'Score_Away': 34}
 ]
 
-# Parsing de tes matchs futurs
+
 matches_text = """
 Perpignan;Toulouse|Montauban;Clermont|Lyon;Pau|Montpellier;Bayonne|Stade Français;Castres|Bordeaux Bègles;Racing 92|La Rochelle;Toulon
 Clermont;La Rochelle|Bayonne;Castres|Racing 92;Lyon|Toulon;Montpellier|Toulouse;Pau|Bordeaux Bègles;Stade Français|Perpignan;Montauban
@@ -522,7 +469,7 @@ for line in lines:
                 future_matches.append({'Home': team_map[h_name], 'Visitor': team_map[v_name]})
 
 # ==========================================
-# 4. PRÉPARATION DES DONNÉES (AVEC FEATURES AVANCÉES)
+# 4. PRÉPARATION DES DONNÉES 
 # ==========================================
 def prepare_data(matches_list, stats_df, is_training=True):
     df = pd.DataFrame(matches_list)
@@ -533,8 +480,7 @@ def prepare_data(matches_list, stats_df, is_training=True):
     df = df.merge(stats_df, left_on='Visitor', right_on='Team')
     df = df.rename(columns=lambda x: x+'_Visitor' if x not in ['Home','Visitor','Score_Home','Score_Away'] and '_Home' not in x else x)
 
-    # --- CRÉATION DE FEATURES COMPLEXES ---
-    # Ici, on utilise enfin toute la richesse du CSV
+ 
 
     # 1. Attaque/Défense (Points à Domicile vs Extérieur)
     df['Diff_Points_Context'] = df['P_att_home_Home'] - df['P_def_away_Visitor']
@@ -567,11 +513,11 @@ def prepare_data(matches_list, stats_df, is_training=True):
 
     return df, df[feature_cols].values, target
 
-# Préparation
+
 df_train, X_train, y_train = prepare_data(history_matches, df_stats, True)
 df_future, X_future, _ = prepare_data(future_matches, df_stats, False)
 
-# Scaler (Indispensable car "Mètres" = 400 alors que "Essais" = 3)
+
 scaler = RobustScaler(quantile_range=(25.0, 75.0))
 X_train_scaled = scaler.fit_transform(X_train)
 X_future_scaled = scaler.transform(X_future)
@@ -584,13 +530,13 @@ X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
     X_train_tensor.numpy(), y_train_tensor.numpy(), test_size=0.12, random_state=42
 )
 
-# On reconvertit en Tensors PyTorch
+
 X_train_sub = torch.FloatTensor(X_train_split)
 y_train_sub = torch.FloatTensor(y_train_split)
 X_val_sub = torch.FloatTensor(X_val_split)
 y_val_sub = torch.FloatTensor(y_val_split)
 # ==========================================
-# 5. LE MODÈLE (Plus gros pour gérer plus d'infos)
+# 5. LE MODÈLE 
 # ==========================================
 class AdvancedPredictor(nn.Module):
     def __init__(self, input_size):
