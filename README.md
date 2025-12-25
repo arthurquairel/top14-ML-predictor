@@ -19,7 +19,7 @@ The core engine includes a **Season Simulator** that applies official Top 14 rul
 The project is built around a robust data pipeline and a regression-based neural network.
 
 ### 1. Advanced Data Engineering
-* **Data Source:** Statistical aggregates from the current season (`Predictions top 14moy - Feuille 1.csv`) scraped by myself.
+* **Data Source:** Statistical aggregates from the current season (`Data top 14 with modifications.csv`) scraped by myself.
 * **Home/Away Split:** The model distinguishes between a team's performance at home versus away, crucial for rugby analysis.
 * **Feature Engineering:** Creation of contextual metrics:
     * `Diff_Context`: Home Attack vs. Visitor Defense.
